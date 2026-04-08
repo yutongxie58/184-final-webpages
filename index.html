@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Underwater Volumetric Scattering</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 950px;
+        margin: 40px auto;
+        padding: 0 24px;
+        line-height: 1.65;
+        color: #1f1f1f;
+        background: #ffffff;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: #111;
+      }
+
+      h1 {
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 12px;
+        margin-bottom: 24px;
+      }
+
+      h2 {
+        margin-top: 36px;
+        border-bottom: 1px solid #e5e5e5;
+        padding-bottom: 6px;
+      }
+
+      h3 {
+        margin-top: 24px;
+        margin-bottom: 10px;
+      }
+
+      p {
+        margin: 12px 0;
+      }
+
+      ul {
+        margin: 10px 0 16px 24px;
+      }
+
+      li {
+        margin-bottom: 8px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        margin-bottom: 24px;
+      }
+
+      th,
+      td {
+        border: 1px solid #dcdcdc;
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f6f6f6;
+      }
+
+      .subtle {
+        color: #555;
+      }
+
+      .code {
+        background: #f4f4f4;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Underwater Volumetric Scattering</h1>
+
+    <section>
+      <h2>Summary</h2>
+      <p>
+        We're extending our HW3 path tracer to render underwater scenes with
+        volumetric scattering. Instead of light only bouncing off surfaces, rays
+        will now scatter within the water itself, letting us capture
+        depth-dependent haze and light shafts. We'll start with uniform water
+        density, then extend to spatially-varying density fields that simulate
+        drifting particle clouds and changing turbidity.
+      </p>
+    </section>
+
+    <section>
+      <h2>Team Members</h2>
+      <ul>
+        <li>Leon Wu</li>
+        <li>Haichao Li</li>
+        <li>Yuanbo Pang</li>
+        <li>Yutong Xie</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Problem Description</h2>
+      <p>
+        Our HW3 path tracer only knows how to handle light at surfaces. When a
+        ray hits an object, we compute reflection, refraction, or diffuse
+        scattering—but between surfaces, we assume light just travels through
+        empty space without any interaction. This works fine for rendering solid
+        objects in air, but it completely breaks down for scenes with fog,
+        smoke, or water, where the medium itself affects how light travels.
+      </p>
+      <p>
+        Underwater scenes are a perfect example of where this limitation shows
+        up. In real water, there are tons of suspended particles that absorb and
+        scatter light as it travels. Objects farther away fade into murky
+        blue-green haze. Light from the surface creates visible shafts as it
+        scatters through the water. Visibility drops dramatically with depth.
+        None of this happens in our current renderer because we're missing the
+        entire concept of participating media.
+      </p>
+      <p>
+        The main technical challenge is figuring out what happens along each ray
+        segment. Before, we just marched rays until they hit a surface. Now, we
+        need to account for the possibility that a ray scatters somewhere in the
+        middle of the water before it ever reaches an object. We need to sample
+        where (or if) scattering happens, compute how much light gets absorbed
+        along the way, and handle lighting at these medium scattering events.
+      </p>
+      <p>
+        Here's our plan: we'll model water as a participating medium with
+        absorption and scattering coefficients (σ_a and σ_s). For each ray, we
+        sample a scattering distance from an exponential distribution based on
+        these coefficients. If that distance is shorter than our surface
+        intersection, the ray scatters in the medium instead. When scattering
+        happens, we evaluate direct lighting by shooting shadow rays to lights
+        (accounting for transmittance through the water) and then sample a new
+        direction to continue the path. For transmittance, we'll use
+        Beer-Lambert law, which gives us that exponential visibility falloff
+        with distance.
+      </p>
+      <p>
+        We'll start with uniform density water and isotropic scattering to get
+        the basics working. Once we can render basic underwater haze and light
+        shafts, we want to push it further with spatially-varying density
+        fields. Instead of constant density everywhere, we'd use a 2D density
+        function (likely procedural noise or a height-based field) where
+        particle concentration varies across the scene. This requires ray
+        marching to integrate transmittance through varying density, which is
+        more expensive, but it lets us create localized particle clouds, patches
+        of murky water, and more visually interesting underwater environments.
+        It's a natural extension once the baseline volumetric rendering is in
+        place.
+      </p>
+    </section>
+
+    <section>
+      <h2>Goals and Deliverables</h2>
+
+      <h3>What We Plan to Deliver</h3>
+      <p>
+        Our baseline goal is to implement volumetric scattering in a homogeneous
+        underwater medium. This means extending our HW3 path tracer to handle
+        light interactions within the medium itself, not just at surfaces.
+      </p>
+
+      <p><strong>Core features we will implement:</strong></p>
+      <ul>
+        <li>
+          <strong>Medium representation:</strong> A Medium class with constant
+          absorption and scattering coefficients (σ_a, σ_s) that defines the
+          water's optical properties.
+        </li>
+        <li>
+          <strong>Transmittance computation:</strong> Beer-Lambert attenuation
+          along all ray segments (both camera rays and shadow rays) to model
+          exponential visibility falloff.
+        </li>
+        <li>
+          <strong>Free-flight sampling:</strong> Sample scattering distances
+          from an exponential distribution to determine whether rays scatter in
+          the medium or reach surfaces.
+        </li>
+        <li>
+          <strong>Medium scattering events:</strong> Evaluate direct lighting at
+          scattering points using shadow rays with transmittance, and sample new
+          directions using an isotropic phase function.
+        </li>
+        <li>
+          <strong>Directional light source:</strong> Add overhead directional
+          lighting to simulate sunlight entering the water and creating light
+          shafts.
+        </li>
+      </ul>
+
+      <p><strong>Images we will produce:</strong></p>
+      <ul>
+        <li>
+          Side-by-side comparison of the same underwater scene rendered with and
+          without volumetric scattering (showing the difference participating
+          media makes)
+        </li>
+        <li>
+          Parameter sweep showing how different scattering coefficients affect
+          visibility— from clear water to murky, turbid conditions
+        </li>
+        <li>
+          Depth comparison showing objects at different distances fading into
+          blue-green haze
+        </li>
+        <li>
+          Light shaft visualization with directional lighting from above
+          creating visible god rays through the water
+        </li>
+        <li>
+          Convergence study comparing renders at 64, 256, 1024 samples per pixel
+          to show noise reduction and performance characteristics
+        </li>
+      </ul>
+
+      <p><strong>Quality metrics:</strong></p>
+      <ul>
+        <li>
+          Visual correctness: Does the haze increase with depth? Do light shafts
+          appear where we expect them? Does transmittance follow Beer-Lambert
+          law?
+        </li>
+        <li>
+          Performance: Render time comparison between baseline path tracer and
+          volumetric version (we expect 2-3x slowdown due to medium sampling)
+        </li>
+        <li>
+          Convergence rate: How many samples are needed for clean images? We'll
+          plot MSE vs sample count to quantify noise reduction.
+        </li>
+      </ul>
+
+      <p><strong>Questions we'll answer:</strong></p>
+      <ul>
+        <li>
+          How do absorption vs scattering coefficients affect the visual
+          appearance?
+        </li>
+        <li>What's the performance cost of adding volumetric scattering?</li>
+        <li>
+          How many samples per pixel do we need for acceptable image quality?
+        </li>
+      </ul>
+
+      <h3>What We Hope to Deliver</h3>
+      <p>
+        If the baseline is completed ahead of schedule, we'll extend to
+        spatially-varying density fields. This would replace our constant
+        coefficients with a 2D density function that varies across the scene.
+      </p>
+
+      <p><strong>Stretch features:</strong></p>
+      <ul>
+        <li>
+          <strong>Heterogeneous density:</strong> Use procedural noise (Perlin
+          or simplex) or a 2D texture map to define spatially-varying particle
+          concentration. This requires ray marching to integrate transmittance
+          through varying density.
+        </li>
+        <li>
+          <strong>Localized particle clouds:</strong> Create patches of murky
+          water or drifting sediment clouds that affect visibility locally.
+        </li>
+        <li>
+          <strong>Animated density:</strong> Evolve the density field over time
+          using simple advection or animated noise to simulate moving particles.
+        </li>
+      </ul>
+
+      <p><strong>Additional images if we reach stretch goals:</strong></p>
+      <ul>
+        <li>
+          Renders showing localized particle clouds with varying turbidity
+          across the scene
+        </li>
+        <li>Animation frames showing density fields evolving over time</li>
+        <li>
+          Comparison between homogeneous and heterogeneous media in the same
+          scene
+        </li>
+      </ul>
+
+      <p>
+        We're confident about the baseline because it's a well-understood
+        extension of path tracing with clear references (PBRT Chapter 11, 15).
+        The stretch goal is more ambitious but builds naturally on the baseline
+        framework—it's mainly about replacing constant lookups with density
+        field queries and adding ray marching.
+      </p>
+    </section>
+
+    <section>
+      <h2>Schedule</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Week</th>
+            <th>Tasks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Week 1<br />(Apr 7-13)</td>
+            <td>
+              <strong>Research and setup:</strong> Review PBRT chapters on
+              participating media and volumetric scattering. Study existing
+              implementations and references. Design Medium class structure and
+              plan integration with existing PathTracer code. <br /><br />
+              <strong>Transmittance implementation:</strong> Implement
+              Beer-Lambert transmittance computation. Modify ray tracing loop to
+              apply attenuation along camera rays and shadow rays. Test with
+              simple scenes to verify exponential falloff.
+            </td>
+          </tr>
+          <tr>
+            <td>Week 2<br />(Apr 14-20)</td>
+            <td>
+              <strong>Free-flight sampling:</strong> Implement exponential
+              distance sampling to determine scattering locations. Modify
+              intersection logic to check medium scattering vs surface hits.
+              <br /><br />
+              <strong>Medium scattering:</strong> Add direct lighting evaluation
+              at scattering points. Implement isotropic phase function and
+              direction sampling. Test with simple light sources. <br /><br />
+              <strong>Milestone deliverable (due Apr 20):</strong> Working
+              homogeneous medium with visible haze and basic scattering.
+              Preliminary renders showing depth-dependent visibility.
+            </td>
+          </tr>
+          <tr>
+            <td>Week 3<br />(Apr 21-27)</td>
+            <td>
+              <strong>Lighting and scene setup:</strong> Add directional light
+              source for overhead illumination. Create underwater test scenes
+              with varied geometry. Tune medium parameters for realistic
+              appearance. <br /><br />
+              <strong>Testing and validation:</strong> Generate comparison
+              images (with/without volumetrics, different densities). Run
+              convergence tests at multiple sample counts. Debug any artifacts
+              or performance issues. <br /><br />
+              <strong>Start stretch goal:</strong> If baseline is solid, begin
+              implementing 2D density field infrastructure (noise functions or
+              texture lookups).
+            </td>
+          </tr>
+          <tr>
+            <td>Week 4<br />(Apr 28-May 4)</td>
+            <td>
+              <strong>Stretch goal (if time permits):</strong> Implement ray
+              marching through heterogeneous density. Add procedural noise for
+              spatial variation. Test animated density fields. <br /><br />
+              <strong>Final deliverables (due May 4):</strong> Generate all
+              comparison images and performance graphs. Create presentation
+              slides and demo video. Write final report documenting
+              implementation, results, and lessons learned. <br /><br />
+              <strong>Presentation on May 5, 2026.</strong>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Resources</h2>
+
+      <h3>References</h3>
+      <ul>
+        <li>
+          <strong>Physically Based Rendering (PBRT)</strong> by Pharr, Jakob,
+          and Humphreys
+          <ul>
+            <li>
+              Chapter 11: Volume Scattering - core theory on participating media
+            </li>
+            <li>
+              Chapter 15: Light Transport II (Volume Rendering) - path tracing
+              with volumes
+            </li>
+          </ul>
+        </li>
+        <li>
+          <strong>"A Practical Model for Subsurface Light Transport"</strong> by
+          Jensen et al. - provides background on scattering in participating
+          media
+        </li>
+        <li>
+          <strong>"Production Volume Rendering"</strong> (SIGGRAPH 2017 Course
+          Notes) - practical techniques for heterogeneous media
+        </li>
+        <li>
+          <strong>Scratchapixel tutorials</strong> on volume rendering and
+          participating media - helpful for implementation details
+        </li>
+        <li>
+          <strong>Real underwater photography references</strong> for visual
+          validation of our rendering results
+        </li>
+      </ul>
+
+      <h3>Starting Code</h3>
+      <p>
+        We're building on our CS184 HW3 path tracer implementation. This gives
+        us a working foundation with ray-scene intersection, BSDF sampling,
+        direct lighting, and global illumination. We'll extend the core ray
+        tracing loop and add new medium interaction logic.
+      </p>
+
+      <h3>Computing Platform</h3>
+      <ul>
+        <li>
+          <strong>Development:</strong> Personal laptops (macOS/Linux) for
+          coding and debugging
+        </li>
+        <li>
+          <strong>Rendering:</strong> Hive machines or personal desktops for
+          final high-quality renders
+        </li>
+        <li>
+          <strong>Software:</strong> C++ with existing HW3 codebase, no external
+          rendering libraries
+        </li>
+        <li>
+          <strong>Tools:</strong> Git for version control, standard build tools
+          (CMake/Make), image viewers for validation
+        </li>
+      </ul>
+    </section>
+  </body>
+</html>

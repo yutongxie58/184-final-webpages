@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Underwater Volumetric Scattering &mdash; Milestone Report</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 950px;
+        margin: 40px auto;
+        padding: 0 24px;
+        line-height: 1.65;
+        color: #1f1f1f;
+        background: #ffffff;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: #111;
+      }
+
+      h1 {
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 12px;
+        margin-bottom: 10px;
+      }
+
+      h2 {
+        margin-top: 36px;
+        border-bottom: 1px solid #e5e5e5;
+        padding-bottom: 6px;
+      }
+
+      h3 {
+        margin-top: 24px;
+        margin-bottom: 10px;
+      }
+
+      p {
+        margin: 12px 0;
+      }
+
+      ul {
+        margin: 10px 0 16px 24px;
+      }
+
+      li {
+        margin-bottom: 6px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        margin-bottom: 24px;
+      }
+
+      th,
+      td {
+        border: 1px solid #dcdcdc;
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f6f6f6;
+      }
+
+      .team {
+        color: #333;
+        margin-top: 0;
+      }
+
+      .linkbar {
+        margin: 8px 0 24px 0;
+        font-size: 15px;
+      }
+
+      .linkbar a {
+        margin-right: 14px;
+      }
+
+      figure {
+        margin: 18px 0;
+        text-align: center;
+      }
+
+      figcaption {
+        color: #555;
+        font-size: 14px;
+        margin-top: 6px;
+      }
+
+      .code {
+        background: #f4f4f4;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.95em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Underwater Volumetric Scattering &mdash; Milestone Report</h1>
+    <p class="team">Leon Wu, Haichao Li, Yuanbo Pang, Yutong Xie</p>
+    <div class="linkbar">
+      <a href="https://yutongxie58.github.io/184-final-webpages/">Proposal</a>
+      &middot;
+      <a href="https://docs.google.com/presentation/d/14Y8GGOCLE6h_7ivz8is48Q7zYuWW8e0K/edit?usp=sharing&ouid=109323450877211168480&rtpof=true&sd=true">Slides</a>
+      &middot;
+      <a href="https://drive.google.com/file/d/1jprhIiO_l6Ifhp1F0UR0Kzt9xDSJEMLJ/view?usp=sharing">Milestone Video</a>
+      &middot;
+      <a href="https://github.com/HaichaoLihc/184-final-project">GitHub Repo</a>
+    </div>
+
+    <section>
+      <h2>Summary of Accomplishments</h2>
+      <p>
+        We started from the HW3 path tracer, which treats space between
+        surfaces as vacuum. Over the last two weeks we added participating
+        media support and hooked it into the existing integrator. The code
+        lives in <span class="code">src/pathtracer/medium.h</span> and new
+        paths added to <span class="code">pathtracer.cpp</span>.
+      </p>
+
+      <h3>Core system</h3>
+      <ul>
+        <li>
+          <span class="code">Medium</span> class with per-channel
+          <span class="code">sigma_a</span> and
+          <span class="code">sigma_s</span>. Beer-Lambert transmittance is
+          evaluated per RGB channel.
+        </li>
+        <li>
+          Delta tracking (Woodcock) free-flight sampling for heterogeneous
+          density. Scalar majorant based on the average
+          <span class="code">sigma_t</span>.
+        </li>
+        <li>
+          BBox-bounded medium with a smoothstep height falloff, so water can
+          be confined to a region with a soft boundary.
+        </li>
+        <li>
+          Shadow rays pick up medium transmittance through
+          <span class="code">ray_transmittance</span>. Directional and
+          environment lights use a capped segment so they still contribute.
+        </li>
+      </ul>
+
+      <h3>Advanced sampling</h3>
+      <ul>
+        <li>
+          Equiangular sampling along the camera ray toward each finite light
+          (Kulla &amp; Fajardo 2012). Samples are concentrated near the
+          light, where the single-scatter integrand peaks.
+        </li>
+        <li>
+          Truncated exponential distance sampling over the same ray segment,
+          as a second strategy.
+        </li>
+        <li>
+          Two-strategy MIS with the power heuristic ($\beta = 2$), combining
+          the two. For directional lights or near-axis rays where
+          equiangular degenerates, the code falls back to truncated-exp
+          only.
+        </li>
+      </ul>
+
+      <h3>Test scenes</h3>
+      <p>
+        Two scenes drive the current results.
+        <span class="code">CBbunny.dae</span> is the Cornell box fully
+        underwater, with the overhead area light acting as a sky proxy.
+        <span class="code">CBbunny_water.dae</span> places an explicit water
+        surface at $y = 1.1$ with IOR 1.33, so camera rays entering the box
+        refract through Snell's law with Fresnel reflection at the
+        interface. The water surface is generated by
+        <span class="code">scripts/add_water_surface.py</span>.
+      </p>
+    </section>
+
+    <section>
+      <h2>Preliminary Results</h2>
+      <figure>
+        <img
+          src="images/milestone_compare.png"
+          alt="Cornell box without medium on the left, with chromatic underwater medium on the right"
+          style="width: 100%; max-width: 900px;"
+        />
+        <figcaption>
+          Same Cornell Box scene, without medium (left) and with chromatic
+          underwater medium (right).
+        </figcaption>
+      </figure>
+      <p>
+        The chromatic render shows the teal color shift we were after: red
+        attenuates faster than green and blue, so the red wall and the
+        shadowed floor lose saturation while the blue wall stays close to
+        its surface color. The overhead area light produces soft volumetric
+        illumination in the upper region of the box rather than sharp god
+        rays, which matches how a diffuse sky proxy behaves through a
+        scattering medium. The Snell + Fresnel water surface scene
+        (IOR 1.33) runs through the same pipeline and handles refraction at
+        the interface. On a separate benchmark, swapping the naive
+        delta-tracking estimator for equiangular + MIS gave about a 4x
+        convergence improvement at equal spp. That number is a timing /
+        variance measurement, not something visible in this figure.
+      </p>
+    </section>
+
+    <section>
+      <h2>Progress vs. Proposal</h2>
+      <p>
+        We are ahead of the proposal. Heterogeneous density via a bounded
+        BBox with smoothstep falloff was listed as a "hope to deliver" and
+        is done. Chromatic per-channel
+        <span class="code">sigma_a</span> / <span class="code">sigma_s</span>
+        was not in the original plan; we added it after realizing scalar
+        attenuation does not reproduce the underwater color cast. The
+        equiangular sampler, the two-strategy MIS estimator, and the Snell +
+        Fresnel water surface scene were also not in the original plan and
+        ended up being the most technically involved additions.
+      </p>
+    </section>
+
+    <section>
+      <h2>Design Tradeoffs</h2>
+      <p>
+        Two simplifications to flag. We do single-scatter rather than full
+        multi-bounce volumetric path tracing. This is enough for shallow
+        underwater fog and soft illumination through the medium, and
+        multi-bounce is in the remaining work plan. The area-light PDF in
+        the volumetric MIS estimator is evaluated once at the surface
+        reference point rather than resampled per scattering distance $t$.
+        This is a standard approximation and has negligible bias for the
+        small area lights in our test scenes.
+      </p>
+    </section>
+
+    <section>
+      <h2>Updated Work Plan</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Week</th>
+            <th>Tasks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Apr 21 &ndash; Apr 27</td>
+            <td>
+              Multi-bounce volumetric GI
+              (<span class="code">at_least_one_bounce_radiance</span>
+              currently returns zero for volume events). Animated water
+              surface driven by Gerstner / sum-of-sinusoids waves, with the
+              surface normal modulated per frame.
+            </td>
+          </tr>
+          <tr>
+            <td>Apr 28 &ndash; May 4</td>
+            <td>
+              Render the 10&ndash;30 frame animation of the shifting
+              underwater light pattern. Convergence study (MSE vs spp) to
+              back up the 4x number. Final hero renders, final report
+              webpage, final project video, presentation slides.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>AI Acknowledgement</h2>
+      <p>
+        Claude Code helped write this milestone page (structure, phrasing,
+        image placement). The renderer itself was written by the team.
+        Claude and Cursor were used for rubber-duck debugging and editing
+        help on the code, with all design decisions and implementation
+        review done by the team.
+      </p>
+    </section>
+  </body>
+</html>

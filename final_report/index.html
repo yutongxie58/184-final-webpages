@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Underwater Volumetric Path Tracing | CS 184 Final Report</title>
+    <style>
+      :root {
+        --ink: #172026;
+        --muted: #5b6870;
+        --paper: #f7f5f0;
+        --panel: #ffffff;
+        --line: #d8ddd9;
+        --teal: #0c6b78;
+        --deep: #123844;
+        --coral: #b85b4d;
+        --sand: #eee7d9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        color: var(--ink);
+        background: var(--paper);
+        line-height: 1.68;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      a {
+        color: var(--teal);
+      }
+
+      .hero {
+        min-height: 92vh;
+        color: white;
+        background:
+          linear-gradient(
+            90deg,
+            rgba(10, 21, 24, 0.78),
+            rgba(10, 21, 24, 0.28)
+          ),
+          url("images/final_direct_volume_ultra.png") center / cover no-repeat;
+        display: flex;
+        align-items: flex-end;
+        padding: 8vw 6vw;
+      }
+
+      .hero-content {
+        max-width: 780px;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        font-size: 0.78rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #cde7df;
+        font-family: Arial, sans-serif;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.4rem, 7vw, 5.8rem);
+        line-height: 0.98;
+        font-weight: 400;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        max-width: 700px;
+        margin: 22px 0 0;
+        color: #e9f4ef;
+        font-size: clamp(1rem, 2vw, 1.25rem);
+      }
+
+      .team {
+        margin-top: 28px;
+        color: #d7e5df;
+        font-family: Arial, sans-serif;
+        font-size: 0.92rem;
+      }
+
+      .resource-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+        font-family: Arial, sans-serif;
+      }
+
+      .resource-links a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 7px 13px;
+        border: 1px solid rgba(255, 255, 255, 0.42);
+        border-radius: 999px;
+        color: #f2fbf8;
+        background: rgba(255, 255, 255, 0.12);
+        text-decoration: none;
+        font-size: 0.86rem;
+      }
+
+      .resource-links a:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: rgba(247, 245, 240, 0.94);
+        border-bottom: 1px solid var(--line);
+        backdrop-filter: blur(12px);
+      }
+
+      nav .inner {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 12px 24px;
+        display: flex;
+        gap: 18px;
+        overflow-x: auto;
+        font-family: Arial, sans-serif;
+        font-size: 0.84rem;
+        white-space: nowrap;
+      }
+
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 52px 24px 80px;
+      }
+
+      section {
+        margin: 0 0 58px;
+      }
+
+      h2 {
+        margin: 0 0 18px;
+        color: var(--deep);
+        font-size: clamp(1.5rem, 3vw, 2.2rem);
+        font-weight: 400;
+        line-height: 1.15;
+      }
+
+      h3 {
+        margin: 32px 0 10px;
+        color: var(--teal);
+        font-size: 1.15rem;
+        font-weight: 700;
+        font-family: Arial, sans-serif;
+      }
+
+      p {
+        margin: 0 0 15px;
+      }
+
+      code {
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92em;
+        background: #eef1ed;
+        border: 1px solid #d9dfda;
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+
+      .lead {
+        font-size: 1.12rem;
+        color: #263138;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.75fr);
+        gap: 34px;
+        align-items: start;
+      }
+
+      .callout {
+        padding: 18px 20px;
+        background: var(--sand);
+        border-left: 4px solid var(--coral);
+        border-radius: 6px;
+        color: #2b3439;
+      }
+
+      .formula {
+        margin: 18px 0;
+        padding: 14px 16px;
+        overflow-x: auto;
+        background: #edf4f2;
+        border: 1px solid #cbded8;
+        border-radius: 6px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92rem;
+        line-height: 1.55;
+      }
+
+      .feature-grid,
+      .results-grid,
+      .contrib-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .feature,
+      figure,
+      .contrib {
+        margin: 0;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .feature,
+      .contrib {
+        padding: 18px;
+      }
+
+      .feature strong,
+      .contrib strong {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--deep);
+        font-family: Arial, sans-serif;
+      }
+
+      .feature p,
+      .contrib p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.94rem;
+      }
+
+      figcaption {
+        padding: 10px 12px 12px;
+        color: var(--muted);
+        font-size: 0.88rem;
+        line-height: 1.45;
+      }
+
+      .wide {
+        grid-column: 1 / -1;
+      }
+
+      .compare {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        background: #0a1518;
+        overflow: hidden;
+      }
+
+      .compare img {
+        position: static;
+        height: auto;
+        object-fit: cover;
+      }
+
+      .compare .tag {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.86);
+        color: #17323a;
+        font:
+          700 0.75rem Arial,
+          sans-serif;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 18px 0;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        font-family: Arial, sans-serif;
+        font-size: 0.9rem;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: white;
+        background: var(--deep);
+        font-weight: 700;
+      }
+
+      ul {
+        margin: 0 0 15px;
+        padding-left: 22px;
+      }
+
+      li {
+        margin-bottom: 7px;
+      }
+
+      .refs {
+        padding-left: 20px;
+      }
+
+      .refs li {
+        margin-bottom: 10px;
+      }
+
+      footer {
+        padding: 28px 24px;
+        text-align: center;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        font-family: Arial, sans-serif;
+        font-size: 0.84rem;
+      }
+
+      @media (max-width: 760px) {
+        .hero {
+          min-height: 84vh;
+          padding: 28vw 24px 40px;
+        }
+
+        .two-col,
+        .feature-grid,
+        .results-grid,
+        .contrib-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media print {
+        nav,
+        .hero {
+          display: none;
+        }
+
+        body {
+          background: white;
+          font-size: 10.5pt;
+        }
+
+        main {
+          max-width: none;
+          padding: 0;
+        }
+
+        section {
+          margin-bottom: 22px;
+        }
+
+        figure,
+        .feature,
+        .contrib,
+        table {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero-content">
+        <p class="eyebrow">CS 184 Final Project Report</p>
+        <h1>Underwater Volumetric Path Tracing</h1>
+        <p class="subtitle">
+          A physically motivated underwater renderer with chromatic absorption,
+          forward scattering, wavy water boundaries, surface caustics, and
+          volumetric photon mapping.
+        </p>
+        <p class="team">
+          Leon Wu, Haichao Li, Yuanbo Pang, Yutong Xie<br />
+          CS 184: Computer Graphics and Imaging, Spring 2026
+        </p>
+        <div class="resource-links" aria-label="Project resources">
+          <a
+            href="https://docs.google.com/presentation/d/11aWxE-U52SCSneSrb15Jy65wOFzrVDG2/edit?usp=sharing&amp;ouid=109323450877211168480&amp;rtpof=true&amp;sd=true"
+            >Slides</a
+          >
+          <a href="https://example.com/final-video-placeholder"
+            >Video</a
+          >
+        </div>
+      </div>
+    </header>
+
+    <nav>
+      <div class="inner">
+        <a href="#abstract">Abstract</a>
+        <a href="#approach">Technical Approach</a>
+        <a href="#results">Results</a>
+        <a href="#lessons">Lessons Learned</a>
+        <a href="#references">References</a>
+        <a href="#contributions">Contributions</a>
+      </div>
+    </nav>
+
+    <main>
+      <section id="abstract">
+        <h2>Abstract</h2>
+        <p class="lead">
+          We extended the CS 184 path tracer from a surface-only renderer into
+          an underwater light transport system. Our final renderer models water
+          as a bounded participating medium with wavelength-dependent absorption
+          and scattering, uses a Henyey-Greenstein phase function for the
+          forward scattering look of suspended particles, and adds a refractive
+          glass water surface with Fresnel reflection and transmission. To make
+          underwater shafts of light visible, we implemented direct volume
+          single scattering with equiangular and truncated-exponential multiple
+          importance sampling. To capture harder-to-sample photon paths, we also
+          built a volumetric photon map, a beam-radius-estimation acceleration
+          path, and a surface caustic photon map. The result is an underwater
+          Cornell-box scene with blue-green attenuation, rippled light
+          variation, visible haze, and caustic highlights on submerged objects.
+        </p>
+      </section>
+
+      <section id="approach">
+        <h2>Technical Approach</h2>
+        <div class="two-col">
+          <div>
+            <p>
+              Our starting point was the CS 184 path tracer, which assumes that
+              space between surfaces is vacuum. That assumption breaks most of
+              the visual cues we expect underwater: red light should disappear
+              faster than blue light, beams should become visible through
+              scattering, and the water-air interface should bend light. We
+              therefore added a medium layer to the renderer while keeping the
+              existing BVH, BSDF, and recursive radiance structure intact.
+            </p>
+            <p>
+              The water medium stores per-channel absorption
+              <code>sigma_a</code> and scattering <code>sigma_s</code>. Along
+              any in-medium segment, surface radiance is attenuated by
+              Beer-Lambert transmittance:
+            </p>
+            <div class="formula">
+              T(s) = exp(-sigma_t * s), where sigma_t = sigma_a + sigma_s
+            </div>
+            <p>
+              We tuned the coefficients so red has much larger extinction than
+              blue and green, producing the characteristic underwater shift
+              toward teal with distance. A bounded medium box clips each camera,
+              shadow, photon, and bounce ray to the portion that actually
+              travels through water.
+            </p>
+          </div>
+          <div class="callout">
+            <strong>Core feature set.</strong>
+            <p>
+              Chromatic underwater medium, Henyey-Greenstein phase function,
+              direct volume lighting, volumetric photon mapping, BRE photon
+              queries, surface caustic photons, wavy medium boundaries, wavy
+              shading normals, and render-stat instrumentation.
+            </p>
+          </div>
+        </div>
+
+        <h3>Water Surface and Recursive Transport</h3>
+        <p>
+          We implemented mirror, refraction, and glass BSDFs in
+          <code>advanced_bsdf.cpp</code>. The water surface uses the full
+          unpolarized dielectric Fresnel equations rather than Schlick's
+          approximation. At each glass hit, the BSDF chooses reflection or
+          refraction by Russian roulette using the Fresnel reflectance, and
+          falls back to reflection under total internal reflection. Because
+          glass is a delta BSDF, direct lighting is skipped at the surface;
+          illumination comes from recursively tracing the reflected or refracted
+          ray.
+        </p>
+
+        <h3>Direct Volume Lighting</h3>
+        <p>
+          God rays are single-scatter events: light reaches a point in the
+          water, scatters toward the camera, and survives transmittance along
+          both path segments. For a camera ray segment inside the water, we
+          estimate:
+        </p>
+        <div class="formula">
+          L_vol = integral T_cam(t) * sigma_s * phase(w_i, w_o) * T_light(t) *
+          L_i dt
+        </div>
+        <p>
+          Uniformly sampling the segment was too noisy, so we used two sampling
+          strategies from Kulla and Fajardo: equiangular sampling around the
+          light's projection onto the ray, and truncated exponential sampling
+          following extinction from the camera. We combine them with the power
+          heuristic. This was one of the biggest quality wins because it spends
+          samples where the single-scattering integrand is largest.
+        </p>
+
+        <h3>Photon Maps and BRE</h3>
+        <p>
+          Direct volume lighting captures clean single-scatter shafts, but it
+          does not efficiently find paths that refract through the water
+          surface, scatter in the medium, or focus onto surfaces. We therefore
+          added a photon pass. Photons are emitted from the light, refracted
+          through the analytic wavy water boundary using Snell's law, scattered
+          through the medium with the HG phase function, and stored as volume
+          photon points. Camera rays can gather nearby photons either through a
+          regular 3D grid or through our Mitsuba-inspired beam-radius-estimation
+          mode, where each photon receives an adaptive influence radius and a
+          BVH accelerates ray queries against photon influence boxes.
+        </p>
+        <p>
+          We also implemented a surface caustic photon map. Those photons follow
+          refracted/specular paths and are deposited on diffuse surfaces, giving
+          the floor and pebble scene the focused light patterns that the biased
+          transparent-shadow shortcut cannot produce on its own.
+        </p>
+
+        <h3>Waves and Scene Design</h3>
+        <p>
+          Our wave model has two coupled uses. The medium boundary is perturbed
+          by a sum of sinusoids, changing where rays enter and exit water and
+          changing transmittance lengths. Separately, upward-facing glass
+          triangles can use a matching perturbed shading normal, so Fresnel and
+          refraction respond to the same apparent surface shape. We generated
+          underwater demo scenes and a pebble scatter scene to make volume
+          lighting, BRE, and caustic differences visible in final renders.
+        </p>
+
+        <h3>Problems Encountered</h3>
+        <ul>
+          <li>
+            The first underwater renders were nearly black because shadow rays
+            treated the water surface as opaque. We added a transparent-shadow
+            walker for ideal transmissive surfaces so underwater scatter and
+            diffuse points can see the light.
+          </li>
+          <li>
+            Single-scatter god rays were very noisy under uniform sampling. The
+            equiangular plus exponential MIS estimator solved this more
+            effectively than simply increasing samples.
+          </li>
+          <li>
+            Early VPM renders had bright blue speckles and blobs. We tuned
+            photon strength, radius, and lookup behavior, then added BRE with
+            adaptive photon radii to make the photon contribution more stable.
+          </li>
+          <li>
+            Wavy shading normals and wavy medium boundaries can disagree if they
+            use different height fields. We kept both tied to the same analytic
+            wave function so the surface appearance and volume modulation match.
+          </li>
+        </ul>
+
+        <h3>Implemented Subset and Deviations</h3>
+        <p>
+          We implemented a practical subset of full production volumetric
+          rendering. Our direct volume estimator is physically motivated and
+          uses MIS, while the transparent-shadow path is intentionally biased:
+          it walks through glass without refracting shadow rays, which improves
+          convergence but does not create caustics. We compensate with photon
+          maps for caustic and multi-scatter effects. Our BRE implementation
+          follows the idea of beam-photon queries and adaptive radii, but is
+          scoped to primary camera volume queries by default because secondary
+          BRE lookups were too slow for our renderer.
+        </p>
+      </section>
+
+      <section id="results">
+        <h2>Results</h2>
+        <div class="results-grid">
+          <figure class="wide">
+            <img
+              src="images/final_direct_volume_ultra.png"
+              alt="Final high quality direct volume underwater render"
+            />
+            <figcaption>
+              Final high-quality underwater render, 720 x 540. Chromatic
+              absorption, direct volume scattering, wavy water, and the final
+              pebble scene.
+            </figcaption>
+          </figure>
+
+          <figure class="wide">
+            <div
+              class="compare"
+              aria-label="Static comparison between direct volume and VPM BRE renders"
+            >
+              <img
+                src="images/final_vpm_bre_ultra.png"
+                alt="VPM BRE underwater render"
+              />
+              <img
+                class="before"
+                src="images/final_direct_volume_ultra.png"
+                alt="Direct volume underwater render"
+              />
+              <span class="tag">Direct volume / VPM + BRE comparison</span>
+            </div>
+            <figcaption>
+              Static comparison between the direct-volume result and a VPM+BRE
+              result on the same pebble scene. We did not record a separate
+              video or GIF, so the final report focuses on still-image
+              comparisons.
+            </figcaption>
+          </figure>
+
+          <figure>
+            <img
+              src="images/mode_no_volume.png"
+              alt="No volume lighting underwater mode"
+            />
+            <figcaption>
+              No volume lighting: surfaces are attenuated, but the water itself
+              does not glow.
+            </figcaption>
+          </figure>
+          <figure>
+            <img
+              src="images/mode_direct_volume.png"
+              alt="Direct volume lighting mode"
+            />
+            <figcaption>
+              Direct volume lighting: single-scatter haze and god rays appear.
+            </figcaption>
+          </figure>
+          <figure>
+            <img
+              src="images/mode_plain_vpm.png"
+              alt="Plain volumetric photon map mode"
+            />
+            <figcaption>
+              Point VPM: photons stored in the water and gathered around camera
+              samples.
+            </figcaption>
+          </figure>
+          <figure>
+            <img
+              src="images/mode_vpm_bre.png"
+              alt="VPM with BRE acceleration mode"
+            />
+            <figcaption>
+              VPM + BRE: camera beams query adaptive photon influence radii
+              through a BVH.
+            </figcaption>
+          </figure>
+
+          <figure>
+            <img src="images/caustic_off.png" alt="Surface caustics disabled" />
+            <figcaption>
+              Surface caustic smoke test without caustic photons.
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="images/caustic_on.png" alt="Surface caustics enabled" />
+            <figcaption>
+              Surface caustic smoke test with focused photon contribution.
+            </figcaption>
+          </figure>
+
+          <figure>
+            <img
+              src="images/demo_direct_volume.png"
+              alt="VPM demo scene direct volume"
+            />
+            <figcaption>
+              Generated demo scene rendered with direct volume lighting.
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="images/demo_vpm_bre.png" alt="VPM demo scene with BRE" />
+            <figcaption>
+              Same demo scene using VPM + BRE to emphasize photon-driven
+              scattering.
+            </figcaption>
+          </figure>
+
+          <figure>
+            <img
+              src="images/pebbles_direct_volume_hq.png"
+              alt="High quality pebble direct volume render"
+            />
+            <figcaption>
+              High-quality direct-volume comparison render from the final render
+              set.
+            </figcaption>
+          </figure>
+          <figure>
+            <img
+              src="images/pebbles_vpm_bre_hq.png"
+              alt="High quality pebble VPM BRE render"
+            />
+            <figcaption>
+              High-quality VPM+BRE comparison render from the final render set.
+            </figcaption>
+          </figure>
+
+          <figure class="wide">
+            <img
+              src="images/pebbles_surface_caustic.png"
+              alt="Pebble scene with surface caustics"
+            />
+            <figcaption>
+              Final pebble scene with direct volume, VPM, BRE, surface caustics,
+              and water waves enabled.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="lessons">
+        <h2>Lessons Learned</h2>
+        <div class="feature-grid">
+          <div class="feature">
+            <strong>Sampling strategy mattered more than raw samples.</strong>
+            <p>
+              Equiangular MIS gave a much larger improvement for god rays than
+              blindly increasing spp, because it matched the shape of the volume
+              integrand.
+            </p>
+          </div>
+          <div class="feature">
+            <strong>Bias can be an engineering tool.</strong>
+            <p>
+              Transparent shadows are not fully physical, but they made the
+              scene renderable while photon maps handled the missing caustic
+              paths.
+            </p>
+          </div>
+          <div class="feature">
+            <strong>Acceleration structures decide what is feasible.</strong>
+            <p>
+              The regular BVH was enough for surfaces, but photon queries needed
+              a grid and then BRE/BVH support to remain practical.
+            </p>
+          </div>
+          <div class="feature">
+            <strong>Small scene choices matter.</strong>
+            <p>
+              Pebbles, canopy cards, and wavy boundaries made subtle volumetric
+              differences easier to see and debug.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="references">
+        <h2>References</h2>
+        <h3>Course / Code Base</h3>
+        <ol class="refs">
+          <li>
+            UC Berkeley CS184,
+            <a href="https://cs184.eecs.berkeley.edu/sp26/hw/hw3/"
+              >HW3 Path Tracer assignment and starter code</a
+            >. We used this as the base renderer, scene loader, BVH framework,
+            and path tracing application structure.
+          </li>
+          <li>
+            CS184 course framework and CGL utilities. We built on the provided
+            vector, matrix, image, viewer, COLLADA, and utility infrastructure.
+          </li>
+        </ol>
+
+        <h3>Core Rendering</h3>
+        <ol class="refs">
+          <li>
+            Pharr, Jakob, and Humphreys,
+            <a href="https://pbr-book.org/"
+              ><em
+                >Physically Based Rendering: From Theory to Implementation</em
+              ></a
+            >, 4th edition.
+          </li>
+          <li>
+            Kulla and Fajardo,
+            <a href="https://diglib.eg.org/items/a3eae150-9f7d-4edd-ba74-520c0a20212b"
+              ><em
+                >Importance Sampling Techniques for Path Tracing in
+                Participating Media</em
+              ></a
+            >, EGSR 2012.
+          </li>
+          <li>
+            Jarosz, Nowrouzezahrai, Sadeghi, and Jensen,
+            <a href="https://cs.dartmouth.edu/~wjarosz/publications/jarosz11comprehensive.html"
+              ><em
+                >A Comprehensive Theory of Volumetric Radiance Estimation using
+                Photon Points and Beams</em
+              ></a
+            >, ACM TOG 2011.
+          </li>
+          <li>
+            Jensen,
+            <a href="https://graphics.ucsd.edu/~henrik/papers/photon_map/"
+              ><em>Global Illumination using Photon Maps</em></a
+            >, Rendering Techniques 1996.
+          </li>
+        </ol>
+
+        <h3>Project-Specific</h3>
+        <ol class="refs">
+          <li>
+            Akkaynak and Treibitz,
+            <a href="https://openaccess.thecvf.com/content_cvpr_2018/papers/Akkaynak_A_Revised_Underwater_CVPR_2018_paper.pdf"
+              ><em>A Revised Underwater Image Formation Model</em></a
+            >, CVPR 2018.
+          </li>
+        </ol>
+      </section>
+
+      <section id="contributions">
+        <h2>Contributions</h2>
+        <div class="contrib-grid">
+          <div class="contrib">
+            <strong>Leon Wu</strong>
+            <p>
+              Implemented the glass BSDF with dielectric Fresnel equations and
+              total internal reflection. Built transparent shadow traversal
+              through transmissive surfaces, set up underwater DAE scenes, and
+              helped debug glass-medium interactions.
+            </p>
+          </div>
+          <div class="contrib">
+            <strong>Haichao Li</strong>
+            <p>
+              Implemented volumetric photon tracing, HG-weighted photon
+              scattering, photon storage and gathering, and integration of the
+              photon contribution into the main radiance estimator. Wrote scene
+              generation scripts and helped debug recursive glass transport.
+            </p>
+          </div>
+          <div class="contrib">
+            <strong>Yuanbo Pang</strong>
+            <p>
+              Implemented the participating medium infrastructure, chromatic
+              Beer-Lambert attenuation, Henyey-Greenstein phase evaluation, and
+              wavy medium boundary perturbation. Tuned underwater optical
+              coefficients and helped validate wave consistency.
+            </p>
+          </div>
+          <div class="contrib">
+            <strong>Yutong Xie</strong>
+            <p>
+              Implemented direct volumetric lighting with equiangular and
+              truncated-exponential MIS, added wavy water shading-normal
+              perturbation, produced the final render comparisons, and assembled
+              the final report webpage.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      CS 184: Computer Graphics and Imaging, Spring 2026 | UC Berkeley | Leon
+      Wu, Haichao Li, Yuanbo Pang, Yutong Xie
+    </footer>
+  </body>
+</html>

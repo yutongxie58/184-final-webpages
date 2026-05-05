@@ -384,11 +384,30 @@
         .team {
           color: #263138;
         }
+        /* Print resource links as plain-text "Label: https://..."
+           so the URLs survive PDF export and stay copy-pastable. */
+        .resource-links {
+          display: block;
+          margin-top: 12px;
+          font-size: 10pt;
+          line-height: 1.6;
+        }
         .resource-links a {
-          color: #0c6b78;
+          display: block;
+          padding: 0;
+          margin: 0;
           background: none;
-          border: 1px solid #0c6b78;
-          padding: 4px 10px;
+          border: none;
+          color: #0c6b78;
+          min-height: 0;
+          font-weight: 700;
+        }
+        .resource-links a::after {
+          content: " " attr(href);
+          color: #263138;
+          font-weight: 400;
+          font-family: "SFMono-Regular", Consolas, monospace;
+          font-size: 9pt;
         }
 
         main {

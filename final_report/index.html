@@ -351,14 +351,44 @@
       }
 
       @media print {
-        nav,
-        .hero {
+        nav {
           display: none;
         }
 
         body {
           background: white;
           font-size: 10.5pt;
+        }
+
+        /* Strip the dark cover-image hero down to a printable header */
+        .hero {
+          min-height: 0;
+          background: none;
+          color: #172026;
+          padding: 0 0 18px;
+          display: block;
+        }
+        .hero-content {
+          max-width: none;
+        }
+        .eyebrow {
+          color: #5b6870;
+        }
+        h1 {
+          font-size: 22pt;
+        }
+        .subtitle {
+          color: #263138;
+          font-size: 11pt;
+        }
+        .team {
+          color: #263138;
+        }
+        .resource-links a {
+          color: #0c6b78;
+          background: none;
+          border: 1px solid #0c6b78;
+          padding: 4px 10px;
         }
 
         main {

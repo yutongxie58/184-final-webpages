@@ -398,8 +398,11 @@
             href="https://docs.google.com/presentation/d/11aWxE-U52SCSneSrb15Jy65wOFzrVDG2/edit?usp=sharing&amp;ouid=109323450877211168480&amp;rtpof=true&amp;sd=true"
             >Slides</a
           >
-          <a href="https://example.com/final-video-placeholder"
-            >Video</a
+          <a href="TODO_FINAL_VIDEO_URL"
+            >Video (TODO: replace with hosted link)</a
+          >
+          <a href="https://github.com/HaichaoLihc/184-final-project"
+            >GitHub repo</a
           >
         </div>
       </div>
@@ -555,9 +558,13 @@
             effectively than simply increasing samples.
           </li>
           <li>
-            Early VPM renders had bright blue speckles and blobs. We tuned
+            Early VPM renders had bright blue speckles and blobs (see the
+            blue-artifact before/after pair in the Results section). We tuned
             photon strength, radius, and lookup behavior, then added BRE with
             adaptive photon radii to make the photon contribution more stable.
+            The before render used 120k photons, radius 0.025, strength 1.2;
+            the after render bumped photons to 720k, radius to 0.065, and
+            dropped strength to 0.42.
           </li>
           <li>
             Wavy shading normals and wavy medium boundaries can disagree if they
@@ -582,141 +589,210 @@
 
       <section id="results">
         <h2>Results</h2>
+        <p>
+          All results below use the same scene
+          (<code>CBspheres_underwater_pebbles.dae</code>: a Cornell box
+          underwater with two glass spheres and 95 procedural floor pebbles)
+          rendered at 720 x 540, 128 spp, 12 light samples, max ray depth 8.
+          Holding the scene and integrator settings fixed lets us isolate
+          what each rendering feature actually contributes.
+        </p>
+
+        <h3>Hero render</h3>
         <div class="results-grid">
           <figure class="wide">
             <img
-              src="images/final_direct_volume_ultra.png"
-              alt="Final high quality direct volume underwater render"
+              src="images/pebbles_caustics_on.png"
+              alt="Final underwater render with direct volume, VPM, BRE, and surface caustics"
             />
             <figcaption>
-              Final high-quality underwater render, 720 x 540. Chromatic
-              absorption, direct volume scattering, wavy water, and the final
-              pebble scene.
+              Final pipeline: chromatic underwater medium, direct volume
+              single-scattering, volumetric photon mapping with BRE/BVH
+              acceleration, surface caustic photon map, and wavy water surface.
             </figcaption>
           </figure>
+        </div>
 
-          <figure class="wide">
-            <div
-              class="compare"
-              aria-label="Static comparison between direct volume and VPM BRE renders"
-            >
-              <img
-                src="images/final_vpm_bre_ultra.png"
-                alt="VPM BRE underwater render"
-              />
-              <img
-                class="before"
-                src="images/final_direct_volume_ultra.png"
-                alt="Direct volume underwater render"
-              />
-              <span class="tag">Direct volume / VPM + BRE comparison</span>
-            </div>
+        <h3>Motivation: why volume lighting</h3>
+        <div class="results-grid">
+          <figure>
+            <img
+              src="images/pebbles_no_volume.png"
+              alt="Same scene, volume lighting disabled"
+            />
             <figcaption>
-              Static comparison between the direct-volume result and a VPM+BRE
-              result on the same pebble scene. We did not record a separate
-              video or GIF, so the final report focuses on still-image
-              comparisons.
+              Volume lighting off. Surface BSDFs render correctly but the
+              water itself does not interact with light, so the medium feels
+              empty and shafts of light cannot appear.
             </figcaption>
           </figure>
+          <figure>
+            <img
+              src="images/pebbles_direct_volume.png"
+              alt="Same scene, direct volume single scattering on"
+            />
+            <figcaption>
+              Direct volume single-scattering enabled. In-scattered light
+              becomes visible as soft haze and faint god rays through the
+              water column.
+            </figcaption>
+          </figure>
+        </div>
 
-          <figure>
-            <img
-              src="images/mode_no_volume.png"
-              alt="No volume lighting underwater mode"
-            />
-            <figcaption>
-              No volume lighting: surfaces are attenuated, but the water itself
-              does not glow.
-            </figcaption>
-          </figure>
-          <figure>
-            <img
-              src="images/mode_direct_volume.png"
-              alt="Direct volume lighting mode"
-            />
-            <figcaption>
-              Direct volume lighting: single-scatter haze and god rays appear.
-            </figcaption>
-          </figure>
-          <figure>
-            <img
-              src="images/mode_plain_vpm.png"
-              alt="Plain volumetric photon map mode"
-            />
-            <figcaption>
-              Point VPM: photons stored in the water and gathered around camera
-              samples.
-            </figcaption>
-          </figure>
-          <figure>
-            <img
-              src="images/mode_vpm_bre.png"
-              alt="VPM with BRE acceleration mode"
-            />
-            <figcaption>
-              VPM + BRE: camera beams query adaptive photon influence radii
-              through a BVH.
-            </figcaption>
-          </figure>
-
-          <figure>
-            <img src="images/caustic_off.png" alt="Surface caustics disabled" />
-            <figcaption>
-              Surface caustic smoke test without caustic photons.
-            </figcaption>
-          </figure>
-          <figure>
-            <img src="images/caustic_on.png" alt="Surface caustics enabled" />
-            <figcaption>
-              Surface caustic smoke test with focused photon contribution.
-            </figcaption>
-          </figure>
-
-          <figure>
-            <img
-              src="images/demo_direct_volume.png"
-              alt="VPM demo scene direct volume"
-            />
-            <figcaption>
-              Generated demo scene rendered with direct volume lighting.
-            </figcaption>
-          </figure>
-          <figure>
-            <img src="images/demo_vpm_bre.png" alt="VPM demo scene with BRE" />
-            <figcaption>
-              Same demo scene using VPM + BRE to emphasize photon-driven
-              scattering.
-            </figcaption>
-          </figure>
-
-          <figure>
-            <img
-              src="images/pebbles_direct_volume_hq.png"
-              alt="High quality pebble direct volume render"
-            />
-            <figcaption>
-              High-quality direct-volume comparison render from the final render
-              set.
-            </figcaption>
-          </figure>
-          <figure>
-            <img
-              src="images/pebbles_vpm_bre_hq.png"
-              alt="High quality pebble VPM BRE render"
-            />
-            <figcaption>
-              High-quality VPM+BRE comparison render from the final render set.
-            </figcaption>
-          </figure>
-
+        <h3>Direct volume baseline</h3>
+        <p>
+          Our direct-volume estimator integrates single-scattering along the
+          camera ray inside the medium with equiangular and
+          truncated-exponential MIS. It is the cleanest, lowest-variance
+          path we have. We use this render as the anchor for every
+          comparison below.
+        </p>
+        <div class="results-grid">
           <figure class="wide">
             <img
-              src="images/pebbles_surface_caustic.png"
-              alt="Pebble scene with surface caustics"
+              src="images/pebbles_direct_volume.png"
+              alt="Direct volume baseline render"
             />
             <figcaption>
-              Final pebble scene with direct volume, VPM, BRE, surface caustics,
-              and water waves enabled.
+              Direct volume baseline. 334s render time, no photon maps.
+            </figcaption>
+          </figure>
+        </div>
+
+        <h3>Challenge: photon variance and the blue artifact</h3>
+        <p>
+          When we first turned VPM on, we got bright blue blotches in the
+          water. Volume photons from the blue end of the chromatic spectrum
+          carry the most energy after Beer-Lambert (red attenuates fastest),
+          and with too few photons or too tight a gather radius each photon
+          gets averaged across too small a region, blowing up. Increasing
+          photon count, expanding the gather radius, and lowering photon
+          contribution strength rebalanced the estimator.
+        </p>
+        <div class="results-grid">
+          <figure>
+            <img
+              src="images/pebbles_blue_artifact_before.png"
+              alt="VPM with bad parameters showing blue blotches"
+            />
+            <figcaption>
+              Before. 120k photons requested (60k stored), radius 0.025,
+              strength 1.2. Blue blotches dominate the water column.
+            </figcaption>
+          </figure>
+          <figure>
+            <img
+              src="images/pebbles_blue_artifact_after.png"
+              alt="VPM with tuned parameters; cleaner volume"
+            />
+            <figcaption>
+              After. 720k photons requested (407k stored), radius 0.065,
+              strength 0.42. Clean underwater volume with photon-based
+              scattering still present.
+            </figcaption>
+          </figure>
+        </div>
+
+        <h3>Acceleration: VPM grid lookup vs BRE / BVH</h3>
+        <p>
+          Both renders use identical photon maps (360k photons requested,
+          203k stored, radius 0.06, strength 0.45). The only difference is
+          the lookup data structure. The grid version walks a uniform 3D
+          grid for each query; the BRE version queries a BVH built over
+          per-photon influence boxes with adaptive radii. Visual output is
+          essentially identical, which is the point: BRE preserves the
+          radiance estimate while changing how we get to it.
+        </p>
+        <div class="results-grid">
+          <figure>
+            <img
+              src="images/pebbles_vpm_grid.png"
+              alt="VPM with uniform grid photon lookup"
+            />
+            <figcaption>
+              VPM with uniform grid lookup. Render time 352s.
+            </figcaption>
+          </figure>
+          <figure>
+            <img
+              src="images/pebbles_vpm_bre.png"
+              alt="VPM with BRE BVH photon lookup"
+            />
+            <figcaption>
+              VPM with BRE / BVH lookup. Render time 402s. The two modes
+              produce visually equivalent images; performance differences
+              show up more strongly at higher photon counts and on more
+              complex camera paths.
+            </figcaption>
+          </figure>
+        </div>
+
+        <h3>Surface caustics</h3>
+        <p>
+          Volume photon mapping captures in-scattering along the ray, but
+          it does not put focused refracted patterns onto opaque surfaces.
+          Our separate surface caustic photon map traces caustic photons
+          through the wavy water surface and stores them on diffuse hits.
+          At render time we gather caustic photons at surface intersections
+          to add the focused contribution.
+        </p>
+        <div class="results-grid">
+          <figure>
+            <img
+              src="images/pebbles_caustics_off.png"
+              alt="Pipeline without surface caustics"
+            />
+            <figcaption>
+              Direct volume + VPM + BRE, surface caustics off. Floor and
+              pebbles look correctly underwater but lack focused refracted
+              highlights.
+            </figcaption>
+          </figure>
+          <figure>
+            <img
+              src="images/pebbles_caustics_on.png"
+              alt="Pipeline with surface caustics added"
+            />
+            <figcaption>
+              Same setup with the surface caustic photon map turned on
+              (radius 0.03, strength 0.55). Caustic patterns from the wavy
+              surface land on the floor and the spheres.
+            </figcaption>
+          </figure>
+        </div>
+
+        <h3>Parameter sweep: medium extinction</h3>
+        <p>
+          Direct volume only, with a 2x and 4x sweep of the baseline
+          extinction coefficients
+          (<code>sigma_a</code>, <code>sigma_s</code>) plus matching
+          ripple settings on the boundary. As extinction increases, depth
+          attenuation kicks in faster: red light fades first, then green,
+          and the scene biases toward teal.
+        </p>
+        <div class="results-grid">
+          <figure>
+            <img
+              src="images/pebbles_direct_volume.png"
+              alt="Baseline sigma_t direct volume"
+            />
+            <figcaption>1x baseline.</figcaption>
+          </figure>
+          <figure>
+            <img
+              src="images/pebbles_sigma_t_2x.png"
+              alt="Sigma_t 2x direct volume"
+            />
+            <figcaption>2x sigma_t.</figcaption>
+          </figure>
+          <figure class="wide">
+            <img
+              src="images/pebbles_sigma_t_4x.png"
+              alt="Sigma_t 4x direct volume"
+            />
+            <figcaption>
+              4x sigma_t. Very turbid water; only the close pebbles read
+              clearly, distant geometry fades into the medium.
             </figcaption>
           </figure>
         </div>

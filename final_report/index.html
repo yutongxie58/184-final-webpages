@@ -395,7 +395,7 @@
         </p>
         <div class="resource-links" aria-label="Project resources">
           <a
-            href="https://docs.google.com/presentation/d/11aWxE-U52SCSneSrb15Jy65wOFzrVDG2/edit?usp=sharing&amp;ouid=109323450877211168480&amp;rtpof=true&amp;sd=true"
+            href="https://docs.google.com/presentation/d/1_8FWcSfoTUt8L8RAjnUzpYKgYrv1dHx8/edit"
             >Slides</a
           >
           <a href="https://drive.google.com/file/d/1fAGpRnz1m4vso1Za4U_5u84NLLCnbaxS/view?usp=sharing"
@@ -499,7 +499,9 @@
           strategies from Kulla and Fajardo, equiangular sampling around
           the light's projection on the ray and truncated exponential
           sampling along extinction, and combined them with the power
-          heuristic. This was the largest single quality win.
+          heuristic. This made the biggest visible difference, since
+          equiangular sampling concentrates samples where the integrand
+          peaks.
         </p>
 
         <h3>Photon Maps and BRE</h3>
@@ -604,11 +606,11 @@
 
         <h3>Render set summary</h3>
         <p>
-          Default settings: pebble scene, 720x540, 128 spp, 12 light samples,
-          max ray depth 8. The grid-vs-BRE acceleration comparison uses
-          16 spp at 768x576 (marked &#42;) so the wall-clock difference is
-          easy to read; both modes render the same image at the same params,
-          only the photon-lookup data structure differs.
+          Settings shared across every entry below: pebble scene, 720x540,
+          128 spp, 12 light samples, max ray depth 8. The grid-vs-BRE
+          acceleration comparison is reported separately in the
+          Acceleration subsection (different render config so the timing
+          gap is observable).
         </p>
         <table>
           <thead>
@@ -648,18 +650,6 @@
               <td>on</td><td>on</td><td>on</td><td>off</td>
               <td>720k &rarr; 407k</td><td>0.065</td><td>0.42</td>
               <td>441</td>
-            </tr>
-            <tr>
-              <td>VPM grid lookup&#42;</td>
-              <td>on</td><td>on</td><td>off</td><td>off</td>
-              <td>matched</td><td>matched</td><td>matched</td>
-              <td>23.16</td>
-            </tr>
-            <tr>
-              <td>VPM BRE / BVH lookup&#42;</td>
-              <td>on</td><td>on</td><td>on</td><td>off</td>
-              <td>matched</td><td>matched</td><td>matched</td>
-              <td>15.83</td>
             </tr>
             <tr>
               <td>Full pipeline, caustics on</td>

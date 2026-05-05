@@ -635,8 +635,11 @@
 
         <h3>Render set summary</h3>
         <p>
-          Settings shared across every entry below: pebble scene, 720x540,
-          128 spp, 12 light samples, max ray depth 8.
+          Default settings: pebble scene, 720x540, 128 spp, 12 light samples,
+          max ray depth 8. The grid-vs-BRE acceleration comparison uses
+          16 spp at 768x576 (marked &#42;) so the wall-clock difference is
+          easy to read; both modes render the same image at the same params,
+          only the photon-lookup data structure differs.
         </p>
         <table>
           <thead>
@@ -678,16 +681,16 @@
               <td>441</td>
             </tr>
             <tr>
-              <td>VPM grid lookup</td>
+              <td>VPM grid lookup&#42;</td>
               <td>on</td><td>on</td><td>off</td><td>off</td>
-              <td>360k &rarr; 203k</td><td>0.060</td><td>0.45</td>
-              <td>352</td>
+              <td>matched</td><td>matched</td><td>matched</td>
+              <td>23.16</td>
             </tr>
             <tr>
-              <td>VPM BRE / BVH lookup</td>
+              <td>VPM BRE / BVH lookup&#42;</td>
               <td>on</td><td>on</td><td>on</td><td>off</td>
-              <td>360k &rarr; 203k</td><td>0.060</td><td>0.45</td>
-              <td>402</td>
+              <td>matched</td><td>matched</td><td>matched</td>
+              <td>15.83</td>
             </tr>
             <tr>
               <td>Full pipeline, caustics on</td>
@@ -793,34 +796,42 @@
 
         <h3>Acceleration: VPM grid lookup vs BRE / BVH</h3>
         <p>
-          Both renders use identical photon maps (360k photons requested,
-          203k stored, radius 0.06, strength 0.45). The only difference is
-          the lookup data structure. The grid version walks a uniform 3D
-          grid for each query; the BRE version queries a BVH built over
-          per-photon influence boxes with adaptive radii. Visual output is
-          essentially identical, which is the point: BRE preserves the
-          radiance estimate while changing how we get to it.
+          Both renders use identical photon maps and identical sampling
+          settings. The only difference is the lookup data structure: the
+          grid version walks a uniform 3D grid for each query, while the
+          BRE version queries a BVH built over per-photon influence boxes
+          with adaptive radii. Visual output is essentially identical,
+          which is the point &mdash; BRE preserves the radiance estimate
+          while changing how we get to it.
+        </p>
+        <p>
+          We measured this on a smaller comparison (768x576, 16 spp) so the
+          wall-clock difference is easy to read end-to-end. BRE finished
+          in <strong>15.83s</strong>, while the grid version took
+          <strong>23.16s</strong>. That is roughly a 32% speedup with no
+          observable change to the rendered image. The BRE win comes from
+          replacing per-query grid traversal with a hierarchical
+          camera-ray-vs-photon-box test that prunes empty regions of the
+          medium quickly.
         </p>
         <div class="results-grid">
           <figure>
             <img
-              src="images/pebbles_vpm_grid.png"
+              src="images/pebbles_vpm_grid_fast.png"
               alt="VPM with uniform grid photon lookup"
             />
             <figcaption>
-              VPM with uniform grid lookup. Render time 352s.
+              VPM with uniform grid lookup. 23.16s.
             </figcaption>
           </figure>
           <figure>
             <img
-              src="images/pebbles_vpm_bre.png"
+              src="images/pebbles_vpm_bre_fast.png"
               alt="VPM with BRE BVH photon lookup"
             />
             <figcaption>
-              VPM with BRE / BVH lookup. Render time 402s. The two modes
-              produce visually equivalent images; performance differences
-              show up more strongly at higher photon counts and on more
-              complex camera paths.
+              VPM with BRE / BVH lookup. 15.83s &mdash; about 32% faster
+              than grid for the same render.
             </figcaption>
           </figure>
         </div>
@@ -1000,6 +1011,12 @@
 
       <section id="contributions">
         <h2>Contributions</h2>
+        <p>
+          The team held frequent in-person work sessions and group meetings
+          throughout the project, so everyone contributed to the overall
+          direction and ideation. The per-person breakdown below highlights
+          where each of us spent the most implementation time.
+        </p>
         <div class="contrib-grid">
           <div class="contrib">
             <strong>Leon Wu</strong>

@@ -491,17 +491,16 @@
         <p>
           We implemented mirror, refraction, and glass BSDFs in
           <code>advanced_bsdf.cpp</code>. The water surface uses the full
-          unpolarized dielectric Fresnel equations rather than Schlick's
-          approximation. We picked the full equations because Schlick is
-          tuned for unpolarized incidence near grazing angles on
-          high-IOR-contrast interfaces and over-predicts reflection at the
-          water-air boundary at IOR 1.33, which would visibly darken the
-          underwater interior. At each glass hit, the BSDF chooses
-          reflection or refraction by Russian roulette using the Fresnel
-          reflectance, and falls back to reflection under total internal
-          reflection. Because glass is a delta BSDF, direct lighting is
-          skipped at the surface; illumination comes from recursively
-          tracing the reflected or refracted ray.
+          unpolarized dielectric Fresnel equations (averaging the parallel
+          and perpendicular polarization terms) rather than Schlick's
+          approximation. The full equations are about as cheap to evaluate
+          and avoid any approximation error, so we used them for
+          correctness. At each glass hit, the BSDF chooses reflection or
+          refraction by Russian roulette using the Fresnel reflectance,
+          and falls back to reflection under total internal reflection.
+          Because glass is a delta BSDF, direct lighting is skipped at the
+          surface; illumination comes from recursively tracing the
+          reflected or refracted ray.
         </p>
 
         <h3>Direct Volume Lighting</h3>
@@ -844,7 +843,9 @@
             <figcaption>
               Direct volume + VPM + BRE, surface caustics off. Floor and
               pebbles look correctly underwater but lack focused refracted
-              highlights.
+              highlights. (Same image as the VPM + BRE result above &mdash;
+              caustics-off matches the BRE configuration exactly, so we did
+              not re-render.)
             </figcaption>
           </figure>
           <figure>

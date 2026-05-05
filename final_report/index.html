@@ -398,8 +398,8 @@
             href="https://docs.google.com/presentation/d/11aWxE-U52SCSneSrb15Jy65wOFzrVDG2/edit?usp=sharing&amp;ouid=109323450877211168480&amp;rtpof=true&amp;sd=true"
             >Slides</a
           >
-          <a href="TODO_FINAL_VIDEO_URL"
-            >Video (TODO: replace with hosted link)</a
+          <a href="https://drive.google.com/file/d/1fAGpRnz1m4vso1Za4U_5u84NLLCnbaxS/view?usp=sharing"
+            >Video</a
           >
           <a href="https://github.com/HaichaoLihc/184-final-project"
             >GitHub repo</a
@@ -468,6 +468,13 @@
               shadow, photon, and bounce ray to the portion that actually
               travels through water.
             </p>
+            <p>
+              We chose per-channel <code>sigma_a</code> and
+              <code>sigma_s</code> rather than scalar coefficients because a
+              single extinction value would produce only uniform haze and
+              would lose the depth-dependent color shift that defines the
+              underwater look.
+            </p>
           </div>
           <div class="callout">
             <strong>Core feature set.</strong>
@@ -485,12 +492,16 @@
           We implemented mirror, refraction, and glass BSDFs in
           <code>advanced_bsdf.cpp</code>. The water surface uses the full
           unpolarized dielectric Fresnel equations rather than Schlick's
-          approximation. At each glass hit, the BSDF chooses reflection or
-          refraction by Russian roulette using the Fresnel reflectance, and
-          falls back to reflection under total internal reflection. Because
-          glass is a delta BSDF, direct lighting is skipped at the surface;
-          illumination comes from recursively tracing the reflected or refracted
-          ray.
+          approximation. We picked the full equations because Schlick is
+          tuned for unpolarized incidence near grazing angles on
+          high-IOR-contrast interfaces and over-predicts reflection at the
+          water-air boundary at IOR 1.33, which would visibly darken the
+          underwater interior. At each glass hit, the BSDF chooses
+          reflection or refraction by Russian roulette using the Fresnel
+          reflectance, and falls back to reflection under total internal
+          reflection. Because glass is a delta BSDF, direct lighting is
+          skipped at the surface; illumination comes from recursively
+          tracing the reflected or refracted ray.
         </p>
 
         <h3>Direct Volume Lighting</h3>
@@ -525,6 +536,16 @@
           regular 3D grid or through our Mitsuba-inspired beam-radius-estimation
           mode, where each photon receives an adaptive influence radius and a
           BVH accelerates ray queries against photon influence boxes.
+        </p>
+        <p>
+          We chose adaptive photon radii over a single fixed radius because
+          our photon density varies a lot across the medium: photons cluster
+          near the wavy water boundary where they enter, and thin out
+          deeper down. A fixed small radius leaves the deep regions noisy;
+          a fixed large radius over-blurs near the surface. The adaptive
+          radius keeps the per-photon contribution roughly balanced and was
+          a key part of the fix for the blue-artifact issue documented
+          below in Results.
         </p>
         <p>
           We also implemented a surface caustic photon map. Those photons follow
@@ -612,6 +633,84 @@
             </figcaption>
           </figure>
         </div>
+
+        <h3>Render set summary</h3>
+        <p>
+          Settings shared across every entry below: pebble scene, 720x540,
+          128 spp, 12 light samples, max ray depth 8.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Render</th>
+              <th>Direct vol</th>
+              <th>VPM</th>
+              <th>BRE</th>
+              <th>Caustics</th>
+              <th>Photons (req &rarr; stored)</th>
+              <th>Radius</th>
+              <th>Strength</th>
+              <th>Time (s)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>No volume baseline</td>
+              <td>off</td><td>off</td><td>off</td><td>off</td>
+              <td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>
+              <td>88</td>
+            </tr>
+            <tr>
+              <td>Direct volume baseline</td>
+              <td>on</td><td>off</td><td>off</td><td>off</td>
+              <td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>
+              <td>334</td>
+            </tr>
+            <tr>
+              <td>Blue artifact, before tuning</td>
+              <td>on</td><td>on</td><td>on</td><td>off</td>
+              <td>120k &rarr; 60k</td><td>0.025</td><td>1.20</td>
+              <td>328</td>
+            </tr>
+            <tr>
+              <td>Blue artifact, after tuning</td>
+              <td>on</td><td>on</td><td>on</td><td>off</td>
+              <td>720k &rarr; 407k</td><td>0.065</td><td>0.42</td>
+              <td>441</td>
+            </tr>
+            <tr>
+              <td>VPM grid lookup</td>
+              <td>on</td><td>on</td><td>off</td><td>off</td>
+              <td>360k &rarr; 203k</td><td>0.060</td><td>0.45</td>
+              <td>352</td>
+            </tr>
+            <tr>
+              <td>VPM BRE / BVH lookup</td>
+              <td>on</td><td>on</td><td>on</td><td>off</td>
+              <td>360k &rarr; 203k</td><td>0.060</td><td>0.45</td>
+              <td>402</td>
+            </tr>
+            <tr>
+              <td>Full pipeline, caustics on</td>
+              <td>on</td><td>on</td><td>on</td><td>on</td>
+              <td>360k &rarr; 203k vol + 360k &rarr; 207k caustic</td>
+              <td>0.060 / 0.030</td><td>0.45 / 0.55</td>
+              <td>408</td>
+            </tr>
+            <tr>
+              <td>Direct volume, sigma_t 2x</td>
+              <td>on</td><td>off</td><td>off</td><td>off</td>
+              <td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>
+              <td>383</td>
+            </tr>
+            <tr>
+              <td>Direct volume, sigma_t 4x</td>
+              <td>on</td><td>off</td><td>off</td><td>off</td>
+              <td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>
+              <td>362</td>
+            </tr>
+          </tbody>
+        </table>
 
         <h3>Motivation: why volume lighting</h3>
         <div class="results-grid">
